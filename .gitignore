@@ -1,0 +1,5 @@
+node_modules/
+.github/scripts/verification-results.json
+.github/scripts/generation-output.json
+*.log
+

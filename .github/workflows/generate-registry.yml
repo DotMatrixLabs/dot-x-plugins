@@ -1,0 +1,77 @@
+name: Generate Registry
+
+on:
+  schedule:
+    - cron: '0 */12 * * *' # Every 12 hours
+  push:
+    branches:
+      - main
+    paths:
+      - 'plugins-source.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  pages: write
+  id-token: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Generate registry
+        id: generate
+        run: |
+          node .github/scripts/generate-registry.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TRIGGER_TYPE: ${{ github.event_name }}
+        continue-on-error: true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [ -f .github/scripts/generation-output.json ]; then
+            HAS_CHANGES=$(node -e "console.log(require('./.github/scripts/generation-output.json').has_changes)")
+            echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit registry changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add dist/marketplace-registry.json
+          git commit -m "chore: update registry [skip ci]"
+          git push
+

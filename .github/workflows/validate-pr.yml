@@ -1,0 +1,100 @@
+name: Validate Plugin PR
+
+on:
+  pull_request:
+    paths:
+      - 'plugins-source.json'
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          npm install ajv ajv-formats
+
+      - name: Validate JSON schema
+        id: validate-schema
+        run: |
+          node .github/scripts/validate-schema.js
+
+      - name: Verify plugins
+        id: verify-plugins
+        run: |
+          node .github/scripts/verify-plugins.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Comment PR
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            
+            let comment = '## Plugin Validation Report\n\n';
+            
+            if ('${{ steps.validate-schema.outcome }}' === 'failure') {
+              comment += '❌ **Schema validation failed.**\n\n';
+              comment += 'Please check the workflow logs for details.\n';
+            } else if ('${{ steps.verify-plugins.outcome }}' === 'failure') {
+              comment += '❌ **Plugin verification failed.**\n\n';
+              comment += 'Please check the workflow logs for details.\n';
+            } else {
+              // Try to read verification results
+              try {
+                const resultsPath = path.join(process.cwd(), '.github', 'scripts', 'verification-results.json');
+                if (fs.existsSync(resultsPath)) {
+                  const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
+                  
+                  comment += '✅ **Validation passed!**\n\n';
+                  comment += '| Plugin | Status | Permissions |\n';
+                  comment += '|--------|--------|-------------|\n';
+                  
+                  results.forEach(plugin => {
+                    const perms = plugin.permissions && plugin.permissions.length > 0
+                      ? plugin.permissions.map(p => `\`${p}\``).join(', ')
+                      : 'None';
+                    comment += `| ${plugin.name} | ✅ OK | ${perms} |\n`;
+                  });
+                  
+                  const hasNetworkPerms = results.some(p => 
+                    p.permissions && p.permissions.some(perm => perm.includes('--allow-net'))
+                  );
+                  
+                  if (hasNetworkPerms) {
+                    comment += '\n> ⚠️ **Warning:** Plugins with network permissions require careful security review.\n';
+                  }
+                } else {
+                  comment += '✅ **Validation passed!**\n\n';
+                  comment += 'No plugins were added or modified in this PR.\n';
+                }
+              } catch (error) {
+                comment += '✅ **Validation passed!**\n\n';
+                comment += 'Unable to generate detailed report.\n';
+              }
+            }
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
