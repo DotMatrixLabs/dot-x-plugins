@@ -4,7 +4,7 @@ The official registry and submission hub for Dot X plugins.
 
 ## Overview
 
-This repository serves as the secure, decentralized plugin marketplace for the Dot X application. It implements supply chain security measures to prevent "Trojanning" attacks where malicious code could be swapped after initial approval.
+This repository serves as the official plugin marketplace for Dot X.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ This repository serves as the secure, decentralized plugin marketplace for the D
    - Contains plugin metadata: name, description, repo, release tag, etc.
 
 2. **Final Register** (`dist/marketplace-registry.json`)
-   - The read-only registry consumed by the Tauri app
+   - The read-only registry consumed by Dot X
    - Generated automatically by GitHub Actions
    - Hosted via GitHub Pages
    - Includes integrity hashes and verified permissions
@@ -64,7 +64,7 @@ This repository serves as the secure, decentralized plugin marketplace for the D
          "min_app_version": "1.0.0",
          "tags": ["productivity", "ui"],
          "author": "Your Name",
-         "funding_url": "https://github.com/sponsors/username" // optional
+         "funding_url": "https://github.com/sponsors/username"
        }
      ]
    }
@@ -103,7 +103,7 @@ Your `metadata.json` should follow this structure:
 - `--allow-write` - File system write access
 - `--allow-env` - Environment variable access
 - `--allow-run` - Subprocess execution
-- `--allow-ffi` - Foreign function interface
+- `--allow-ffi` - Foreign function interface access
 
 ## Registry Schema
 
@@ -112,14 +112,14 @@ Your `metadata.json` should follow this structure:
 ```typescript
 {
   plugins: Array<{
-    name: string;              // Unique plugin identifier
-    description: string;        // Plugin description
-    repo: string;              // GitHub repository URL
-    release_tag: string;        // Release tag (e.g., "v1.0.0")
-    min_app_version: string;   // Minimum app version (semver)
-    tags: string[];            // Array of tags
-    author: string;            // Author name
-    funding_url?: string;     // Optional funding URL
+    name: string;
+    description: string;
+    repo: string;
+    release_tag: string;
+    min_app_version: string;
+    tags: string[];
+    author: string;
+    funding_url?: string;
   }>
 }
 ```
@@ -128,15 +128,14 @@ Your `metadata.json` should follow this structure:
 
 ```typescript
 {
-  generated_at: string;        // ISO timestamp
+  generated_at: string;
   plugins: Array<{
-    // ... all source fields ...
-    version: string;           // Same as release_tag
-    integrity_hash: string;     // SHA-256 hash (sha256-...)
-    approved_permissions: string[]; // Extracted from metadata.json
-    downloads: number;         // Download count
-    metadata_url: string;      // Direct download URL
-    index_url: string;         // Direct download URL
+    version: string;
+    integrity_hash: string;
+    approved_permissions: string[];
+    downloads: number;
+    metadata_url: string;
+    index_url: string;
   }>
 }
 ```
@@ -150,7 +149,7 @@ Your `metadata.json` should follow this structure:
 **Actions:**
 1. Validates JSON schema
 2. Verifies GitHub repo and release exist
-3. Downloads `metadata.json` to extract permissions
+3. Downloads `metadata.json` and extracts permissions
 4. Posts PR comment with permission summary
 
 ### Registry Generation Workflow
@@ -163,9 +162,9 @@ Your `metadata.json` should follow this structure:
 **Actions:**
 1. Loads source and existing registry
 2. For each plugin:
-   - **Skip if unchanged**: Updates only download count
-   - **Process if new/changed**: Downloads files, calculates hash, extracts permissions
-   - **Security gate**: If permissions expanded on schedule, creates security review PR
+   - Updates download count if unchanged
+   - Downloads files, calculates hash, extracts permissions if new/changed
+   - Creates security review PR if permissions expanded during scheduled update
 3. Generates `dist/marketplace-registry.json`
 4. Deploys to GitHub Pages
 5. Commits changes to repository
@@ -177,25 +176,9 @@ The registry is available at:
 https://<user>.github.io/dot-x-plugins/marketplace-registry.json
 ```
 
-Or via the repository's GitHub Pages URL.
-
 ## Security Considerations
 
-### Preventing Trojanning
-
-The registry prevents "Trojanning" attacks through:
-
-1. **Immutable Hashes**: Once a version is approved, its hash is locked
-2. **Hash Verification**: The app verifies the hash before installation
-3. **Permission Tracking**: Permission changes require explicit review
-4. **Automated Monitoring**: Scheduled checks detect unexpected changes
-
-### Permission Expansion
-
-When a plugin's permissions expand:
-- During PR review: Normal review process applies
-- During scheduled update: A security review PR is automatically created
-- Human approval required before registry update
+The registry prevents "Trojanning" attacks through immutable hashes, hash verification, and permission tracking. Permission expansions detected during scheduled updates automatically trigger a security review PR requiring human approval.
 
 ## Development
 
