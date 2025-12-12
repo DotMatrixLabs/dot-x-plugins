@@ -13,7 +13,7 @@ This repository serves as the official plugin marketplace for Dot X.
 1. **Source Register** (`plugins-source.json`)
    - The single source of truth for developer submissions
    - Developers submit PRs to modify this file
-   - Contains plugin metadata: name, description, repo, release tag, etc.
+   - Contains plugin metadata: id, name, author, description, repo, tags
 
 2. **Final Register** (`dist/marketplace-registry.json`)
    - The read-only registry consumed by Dot X
@@ -29,7 +29,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 #### Integrity Verification
 - SHA-256 hash calculated at approval time
-- Hash includes both `metadata.json` and `index.js` files
+- Hash includes both `manifest.json` and `index.js` files
 - App verifies hash before installation
 - Any byte change invalidates the hash and blocks installation
 
@@ -43,9 +43,10 @@ This repository serves as the official plugin marketplace for Dot X.
 ### Prerequisites
 
 1. Your plugin must be published as a GitHub Release
-2. The release must include:
-   - `metadata.json` - Plugin metadata including permissions
+2. The latest release must include:
+   - `manifest.json` - Plugin manifest including id, permissions, and dotxVersion
    - `index.js` - The plugin code
+3. The `id` field in your `manifest.json` must match the `id` you specify in `plugins-source.json`
 
 ### Submission Process
 
@@ -57,13 +58,12 @@ This repository serves as the official plugin marketplace for Dot X.
      "$schema": "./schemas/plugins-source.schema.json",
      "plugins": [
        {
-         "name": "my-awesome-plugin",
+         "id": "my-awesome-plugin",
+         "name": "My Awesome Plugin",
+         "author": "Your Name",
          "description": "A plugin that does awesome things",
          "repo": "https://github.com/username/my-awesome-plugin",
-         "release_tag": "v1.0.0",
-         "min_app_version": "1.0.0",
          "tags": ["productivity", "ui"],
-         "author": "Your Name",
          "funding_url": "https://github.com/sponsors/username"
        }
      ]
@@ -73,37 +73,53 @@ This repository serves as the official plugin marketplace for Dot X.
 3. **Create a Pull Request**
    - The PR validation workflow will automatically:
      - Validate JSON schema
-     - Verify the GitHub repo and release exist
-     - Download and analyze `metadata.json`
+     - Verify the GitHub repo and latest release exist
+     - Download and analyze `manifest.json` from the latest release
+     - Verify the `id` in `manifest.json` matches your submission
      - Post a comment listing detected permissions
 
 4. **Wait for Review**
    - Maintainers will review your submission
    - Once approved and merged, the registry will be automatically updated
 
-### Plugin Metadata Format
+### Plugin Manifest Format
 
-Your `metadata.json` should follow this structure:
+Your `manifest.json` must be included in your GitHub release assets and should follow this structure:
 
 ```json
 {
-  "name": "my-awesome-plugin",
+  "id": "my-awesome-plugin",
+  "name": "My Awesome Plugin",
   "version": "1.0.0",
   "description": "Plugin description",
+  "author": "Your Name",
+  "dotxVersion": ">=1.0.0",
+  "main": "main.ts",
   "permissions": [
-    "--allow-net",
-    "--allow-read"
-  ]
+    "env"
+  ],
+  "license": "MIT"
 }
 ```
 
-**Common Deno Permissions:**
-- `--allow-net` - Network access
-- `--allow-read` - File system read access
-- `--allow-write` - File system write access
-- `--allow-env` - Environment variable access
-- `--allow-run` - Subprocess execution
-- `--allow-ffi` - Foreign function interface access
+**Required Fields:**
+- `id` - Must match the `id` in `plugins-source.json`
+- `name` - Display name for your plugin
+- `version` - Plugin version (semver)
+- `description` - Short description
+- `author` - Author name
+- `dotxVersion` - Minimum Dot X version requirement (e.g., ">=1.0.0")
+- `permissions` - Array of permission strings
+
+**Common Permissions:**
+- `env` - Environment variable access
+- `net` - Network access
+- `read` - File system read access
+- `write` - File system write access
+- `run` - Subprocess execution
+- `ffi` - Foreign function interface access
+
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure your latest release includes both `manifest.json` and `index.js`.
 
 ## Registry Schema
 
@@ -112,14 +128,13 @@ Your `metadata.json` should follow this structure:
 ```typescript
 {
   plugins: Array<{
-    name: string;
-    description: string;
-    repo: string;
-    release_tag: string;
-    min_app_version: string;
-    tags: string[];
-    author: string;
-    funding_url?: string;
+    id: string;              // Unique plugin ID (must match manifest.json)
+    name: string;            // Display name
+    author: string;          // Author name
+    description: string;     // Plugin description
+    repo: string;            // GitHub repository URL
+    tags: string[];          // Array of tags
+    funding_url?: string;    // Optional funding/sponsorship URL
   }>
 }
 ```
@@ -130,12 +145,20 @@ Your `metadata.json` should follow this structure:
 {
   generated_at: string;
   plugins: Array<{
-    version: string;
-    integrity_hash: string;
-    approved_permissions: string[];
-    downloads: number;
-    metadata_url: string;
-    index_url: string;
+    id: string;                    // Plugin ID
+    name: string;                  // Display name
+    description: string;           // Description
+    repo: string;                 // Repository URL
+    version: string;               // Latest release tag
+    dotxVersion: string | null;    // Minimum Dot X version from manifest
+    tags: string[];                // Tags
+    author: string;                // Author
+    funding_url?: string;          // Optional funding URL
+    integrity_hash: string;        // SHA-256 hash of manifest.json + index.js
+    approved_permissions: string[]; // Approved permissions
+    downloads: number;             // Download count
+    manifest_url: string;          // URL to manifest.json asset
+    index_url: string;             // URL to index.js asset
   }>
 }
 ```
@@ -148,9 +171,10 @@ Your `metadata.json` should follow this structure:
 
 **Actions:**
 1. Validates JSON schema
-2. Verifies GitHub repo and release exist
-3. Downloads `metadata.json` and extracts permissions
-4. Posts PR comment with permission summary
+2. Verifies GitHub repo and latest release exist
+3. Downloads `manifest.json` from latest release and verifies `id` matches
+4. Extracts permissions from manifest
+5. Posts PR comment with permission summary
 
 ### Registry Generation Workflow
 
@@ -162,8 +186,10 @@ Your `metadata.json` should follow this structure:
 **Actions:**
 1. Loads source and existing registry
 2. For each plugin:
-   - Updates download count if unchanged
-   - Downloads files, calculates hash, extracts permissions if new/changed
+   - Fetches the latest GitHub release
+   - Compares latest release tag to stored version
+   - If version unchanged: updates mutable fields (name, description, tags, etc.) only
+   - If version changed: downloads `manifest.json` and `index.js`, calculates hash, extracts permissions and `dotxVersion`
    - Creates security review PR if permissions expanded during scheduled update
 3. Generates `dist/marketplace-registry.json`
 4. Deploys to GitHub Pages

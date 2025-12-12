@@ -10,11 +10,19 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["name", "description", "repo", "release_tag", "min_app_version", "tags", "author"],
+        "required": ["id", "name", "author", "description", "repo", "tags"],
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique plugin ID (must match manifest.json id)"
+          },
           "name": {
             "type": "string",
-            "description": "Plugin name (must be unique)"
+            "description": "Plugin display name"
+          },
+          "author": {
+            "type": "string",
+            "description": "Plugin author name"
           },
           "description": {
             "type": "string",
@@ -24,16 +32,6 @@
             "type": "string",
             "pattern": "^https://github\\.com/[^/]+/[^/]+/?$",
             "description": "GitHub repository URL"
-          },
-          "release_tag": {
-            "type": "string",
-            "pattern": "^v?\\d+\\.\\d+\\.\\d+",
-            "description": "GitHub release tag (e.g., v1.0.0)"
-          },
-          "min_app_version": {
-            "type": "string",
-            "pattern": "^\\d+\\.\\d+\\.\\d+",
-            "description": "Minimum required app version (semver)"
           },
           "tags": {
             "type": "array",
@@ -47,10 +45,6 @@
             "type": "string",
             "format": "uri",
             "description": "Optional funding/sponsorship URL"
-          },
-          "author": {
-            "type": "string",
-            "description": "Plugin author name"
           }
         }
       }

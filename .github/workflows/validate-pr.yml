@@ -71,7 +71,8 @@ jobs:
                     const perms = plugin.permissions && plugin.permissions.length > 0
                       ? plugin.permissions.map(p => `\`${p}\``).join(', ')
                       : 'None';
-                    comment += `| ${plugin.name} | ✅ OK | ${perms} |\n`;
+                    const displayName = plugin.id ? `${plugin.name} (${plugin.id})` : plugin.name;
+                    comment += `| ${displayName} | ✅ OK | ${perms} |\n`;
                   });
                   
                   const hasNetworkPerms = results.some(p => 

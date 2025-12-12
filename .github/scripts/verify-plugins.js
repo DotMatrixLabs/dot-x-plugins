@@ -66,39 +66,40 @@ function downloadFile(url) {
 async function verifyPlugin(plugin, token) {
   const { owner, repo } = parseGitHubUrl(plugin.repo);
   const results = {
+    id: plugin.id,
     name: plugin.name,
     status: 'ok',
     permissions: []
   };
 
   try {
-    // Verify release exists
-    const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${plugin.release_tag}`;
+    const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
     const release = await githubApiRequest(releaseUrl, token);
     
-    // Find metadata.json asset
-    const metadataAsset = release.assets.find(asset => 
-      asset.name === 'metadata.json' || asset.name.endsWith('/metadata.json')
+    const manifestAsset = release.assets.find(asset => 
+      asset.name === 'manifest.json' || asset.name.endsWith('/manifest.json')
     );
 
-    if (!metadataAsset) {
-      throw new Error(`metadata.json not found in release ${plugin.release_tag}`);
+    if (!manifestAsset) {
+      throw new Error(`manifest.json not found in latest release ${release.tag_name}`);
     }
 
-    // Download and parse metadata.json
-    const metadataContent = await downloadFile(metadataAsset.browser_download_url);
-    const metadata = JSON.parse(metadataContent);
+    const manifestContent = await downloadFile(manifestAsset.browser_download_url);
+    const manifest = JSON.parse(manifestContent);
 
-    // Extract permissions
-    if (metadata.permissions && Array.isArray(metadata.permissions)) {
-      results.permissions = metadata.permissions;
+    if (manifest.id !== plugin.id) {
+      throw new Error(`Plugin ID mismatch: expected ${plugin.id}, found ${manifest.id} in manifest.json`);
     }
 
-    console.log(`✅ Verified ${plugin.name}: ${results.permissions.length} permissions`);
+    if (manifest.permissions && Array.isArray(manifest.permissions)) {
+      results.permissions = manifest.permissions;
+    }
+
+    console.log(`✅ Verified ${plugin.name} (${plugin.id}): ${results.permissions.length} permissions`);
     return results;
 
   } catch (error) {
-    console.error(`❌ Failed to verify ${plugin.name}: ${error.message}`);
+    console.error(`❌ Failed to verify ${plugin.name} (${plugin.id}): ${error.message}`);
     results.status = 'error';
     results.error = error.message;
     return results;

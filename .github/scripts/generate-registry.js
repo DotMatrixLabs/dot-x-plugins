@@ -72,8 +72,8 @@ function downloadFile(url) {
   });
 }
 
-function calculateCombinedHash(metadataContent, indexContent) {
-  const combined = metadataContent + '\n---SEPARATOR---\n' + indexContent;
+function calculateCombinedHash(manifestContent, indexContent) {
+  const combined = manifestContent + '\n---SEPARATOR---\n' + indexContent;
   const hash = crypto.createHash('sha256').update(combined, 'utf8').digest('hex');
   return `sha256-${hash}`;
 }
@@ -86,10 +86,10 @@ function detectPermissionExpansion(currentPerms, newPerms) {
 
 async function createSecurityReviewPR(plugin, token, repository) {
   const [owner, repo] = repository.split('/');
-  const title = `[ACTION REQUIRED] Security Review for ${plugin.name} ${plugin.release_tag}`;
+  const title = `[ACTION REQUIRED] Security Review for ${plugin.name} ${plugin.version}`;
   const body = `## Security Review Required
 
-The plugin **${plugin.name}** has expanded permissions in version **${plugin.release_tag}**.
+The plugin **${plugin.name}** (${plugin.id}) has expanded permissions in version **${plugin.version}**.
 
 ### Current Permissions
 ${(plugin.approved_permissions || []).map(p => `- \`${p}\``).join('\n') || 'None'}
@@ -101,13 +101,13 @@ ${(plugin.permissions || []).map(p => `- \`${p}\``).join('\n') || 'None'}
 Please review the permission changes and manually approve this update in the registry.
 
 **Repository:** ${plugin.repo}
-**Release:** ${plugin.release_tag}
+**Release:** ${plugin.version}
 **Integrity Hash:** ${plugin.integrity_hash}
 `;
 
   try {
     // Create a branch for the PR
-    const branchName = `security-review-${plugin.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
+    const branchName = `security-review-${plugin.id.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
     
     // Get default branch
     const repoInfo = await githubApiRequest(`https://api.github.com/repos/${owner}/${repo}`, token);
@@ -148,104 +148,98 @@ Please review the permission changes and manually approve this update in the reg
 async function processPlugin(sourcePlugin, existingPlugin, token, repository, triggerType) {
   const { owner, repo } = parseGitHubUrl(sourcePlugin.repo);
   
-  // SKIP CHECK: If version matches, only update downloads
-  if (existingPlugin && existingPlugin.version === sourcePlugin.release_tag) {
-    console.log(`⏭️  Skipping ${sourcePlugin.name} (version unchanged)`);
-    return {
-      ...existingPlugin,
-      downloads: existingPlugin.downloads || 0, // Placeholder for now
-      // Update source fields that might have changed
-      name: sourcePlugin.name,
-      description: sourcePlugin.description,
-      min_app_version: sourcePlugin.min_app_version,
-      tags: sourcePlugin.tags,
-      funding_url: sourcePlugin.funding_url,
-      author: sourcePlugin.author
-    };
-  }
-
-  // PROCESS NEW: Download and hash
-  console.log(`📦 Processing ${sourcePlugin.name} ${sourcePlugin.release_tag}...`);
-
   try {
-    // Get release info
-    const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${sourcePlugin.release_tag}`;
+    const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
     const release = await githubApiRequest(releaseUrl, token);
+    const latestTag = release.tag_name;
 
-    // Find assets
-    const metadataAsset = release.assets.find(asset => 
-      asset.name === 'metadata.json' || asset.name.endsWith('/metadata.json')
+    if (existingPlugin && existingPlugin.version === latestTag) {
+      console.log(`⏭️  Skipping ${sourcePlugin.name} (${sourcePlugin.id}) - version unchanged (${latestTag})`);
+      return {
+        ...existingPlugin,
+        downloads: existingPlugin.downloads || 0,
+        id: sourcePlugin.id,
+        name: sourcePlugin.name,
+        description: sourcePlugin.description,
+        tags: sourcePlugin.tags,
+        funding_url: sourcePlugin.funding_url,
+        author: sourcePlugin.author
+      };
+    }
+
+    console.log(`📦 Processing ${sourcePlugin.name} (${sourcePlugin.id}) - latest release: ${latestTag}...`);
+
+    const manifestAsset = release.assets.find(asset => 
+      asset.name === 'manifest.json' || asset.name.endsWith('/manifest.json')
     );
     const indexAsset = release.assets.find(asset => 
       asset.name === 'index.js' || asset.name.endsWith('/index.js')
     );
 
-    if (!metadataAsset) {
-      throw new Error(`metadata.json not found in release ${sourcePlugin.release_tag}`);
+    if (!manifestAsset) {
+      throw new Error(`manifest.json not found in latest release ${latestTag}`);
     }
     if (!indexAsset) {
-      throw new Error(`index.js not found in release ${sourcePlugin.release_tag}`);
+      throw new Error(`index.js not found in latest release ${latestTag}`);
     }
 
-    // Download files
-    const metadataContent = await downloadFile(metadataAsset.browser_download_url);
+    const manifestContent = await downloadFile(manifestAsset.browser_download_url);
     const indexContent = await downloadFile(indexAsset.browser_download_url);
 
-    // Parse metadata
-    const metadata = JSON.parse(metadataContent);
-    const permissions = metadata.permissions || [];
+    const manifest = JSON.parse(manifestContent);
+    
+    if (manifest.id !== sourcePlugin.id) {
+      throw new Error(`Plugin ID mismatch: expected ${sourcePlugin.id}, found ${manifest.id} in manifest.json`);
+    }
+    
+    const permissions = manifest.permissions || [];
+    const dotxVersion = manifest.dotxVersion || null;
 
-    // Calculate hash
-    const integrityHash = calculateCombinedHash(metadataContent, indexContent);
+    const integrityHash = calculateCombinedHash(manifestContent, indexContent);
 
-    // Check for permission expansion
     const hasExpansion = existingPlugin && detectPermissionExpansion(
       existingPlugin.approved_permissions || [],
       permissions
     );
 
-    // Security gate: If permissions expanded on schedule trigger, create PR
     if (hasExpansion && triggerType === 'schedule') {
-      console.log(`⚠️  Permission expansion detected for ${sourcePlugin.name}. Creating security review PR...`);
+      console.log(`⚠️  Permission expansion detected for ${sourcePlugin.name} (${sourcePlugin.id}). Creating security review PR...`);
       
       const pluginData = {
         ...sourcePlugin,
-        version: sourcePlugin.release_tag,
+        version: latestTag,
         integrity_hash: integrityHash,
         permissions: permissions,
         approved_permissions: existingPlugin.approved_permissions || [],
-        metadata_url: metadataAsset.browser_download_url,
+        manifest_url: manifestAsset.browser_download_url,
         index_url: indexAsset.browser_download_url,
         downloads: existingPlugin?.downloads || 0
       };
 
       await createSecurityReviewPR(pluginData, token, repository);
       
-      // Return existing plugin unchanged
       return existingPlugin;
     }
 
-    // Update plugin entry
     return {
+      id: sourcePlugin.id,
       name: sourcePlugin.name,
       description: sourcePlugin.description,
       repo: sourcePlugin.repo,
-      release_tag: sourcePlugin.release_tag,
-      version: sourcePlugin.release_tag,
-      min_app_version: sourcePlugin.min_app_version,
+      version: latestTag,
+      dotxVersion: dotxVersion,
       tags: sourcePlugin.tags,
       funding_url: sourcePlugin.funding_url,
       author: sourcePlugin.author,
       integrity_hash: integrityHash,
       approved_permissions: permissions,
       downloads: existingPlugin?.downloads || 0,
-      metadata_url: metadataAsset.browser_download_url,
+      manifest_url: manifestAsset.browser_download_url,
       index_url: indexAsset.browser_download_url
     };
 
   } catch (error) {
-    console.error(`❌ Failed to process ${sourcePlugin.name}: ${error.message}`);
-    // Return existing plugin if available, or skip
+    console.error(`❌ Failed to process ${sourcePlugin.name} (${sourcePlugin.id}): ${error.message}`);
     if (existingPlugin) {
       return existingPlugin;
     }
@@ -279,17 +273,17 @@ async function main() {
   // Create dist directory
   fs.mkdirSync(path.dirname(registryFile), { recursive: true });
 
-  // Process plugins
   const existingPluginsMap = new Map();
   (existingRegistry.plugins || []).forEach(p => {
-    existingPluginsMap.set(p.name, p);
+    const key = p.id || p.name;
+    existingPluginsMap.set(key, p);
   });
 
   const processedPlugins = [];
   let hasChanges = false;
 
   for (const sourcePlugin of sourceData.plugins || []) {
-    const existingPlugin = existingPluginsMap.get(sourcePlugin.name);
+    const existingPlugin = existingPluginsMap.get(sourcePlugin.id);
     const processed = await processPlugin(
       sourcePlugin,
       existingPlugin,
