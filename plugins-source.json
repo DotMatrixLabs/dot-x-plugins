@@ -5,7 +5,7 @@
       "id": "hello-world",
       "name": "Hello World",
       "author": "DotMatrixLabs",
-      "description": "A plugin that says hello world",
+      "description": "Hello World demo plugin",
       "repo": "https://github.com/DotMatrixLabs/hello-world-plugin",
       "tags": ["example", "hello-world"]
     }
