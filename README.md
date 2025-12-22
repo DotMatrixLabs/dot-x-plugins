@@ -29,7 +29,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 #### Integrity Verification
 - SHA-256 hash calculated at approval time
-- Hash includes both `manifest.json` and `index.js` files
+- Hash includes both `manifest.json` and `main.js` files
 - App verifies hash before installation
 - Any byte change invalidates the hash and blocks installation
 
@@ -45,7 +45,7 @@ This repository serves as the official plugin marketplace for Dot X.
 1. Your plugin must be published as a GitHub Release
 2. The latest release must include:
    - `manifest.json` - Plugin manifest including id, permissions, and dotxVersion
-   - `index.js` - The plugin code
+   - `main.js` - The plugin code
 3. The `id` field in your `manifest.json` must match the `id` you specify in `plugins-source.json`
 
 ### Submission Process
@@ -119,7 +119,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
 - `run` - Subprocess execution
 - `ffi` - Foreign function interface access
 
-**Note:** The registry automatically uses the **latest release** from your repository. Make sure your latest release includes both `manifest.json` and `index.js`.
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure your latest release includes both `manifest.json` and `main.js`.
 
 ## Registry Schema
 
@@ -154,11 +154,11 @@ Your `manifest.json` must be included in your GitHub release assets and should f
     tags: string[];                // Tags
     author: string;                // Author
     funding_url?: string;          // Optional funding URL
-    integrity_hash: string;        // SHA-256 hash of manifest.json + index.js
+    integrity_hash: string;        // SHA-256 hash of manifest.json + main.js
     approved_permissions: string[]; // Approved permissions
     downloads: number;             // Download count
     manifest_url: string;          // URL to manifest.json asset
-    index_url: string;             // URL to index.js asset
+    index_url: string;             // URL to main.js asset
   }>
 }
 ```
@@ -189,7 +189,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
    - Fetches the latest GitHub release
    - Compares latest release tag to stored version
    - If version unchanged: updates mutable fields (name, description, tags, etc.) only
-   - If version changed: downloads `manifest.json` and `index.js`, calculates hash, extracts permissions and `dotxVersion`
+   - If version changed: downloads `manifest.json` and `main.js`, calculates hash, extracts permissions and `dotxVersion`
    - Creates security review PR if permissions expanded during scheduled update
 3. Generates `dist/marketplace-registry.json`
 4. Deploys to GitHub Pages

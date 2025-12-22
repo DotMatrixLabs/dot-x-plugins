@@ -173,14 +173,14 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       asset.name === 'manifest.json' || asset.name.endsWith('/manifest.json')
     );
     const indexAsset = release.assets.find(asset => 
-      asset.name === 'index.js' || asset.name.endsWith('/index.js')
+      asset.name === 'main.js' || asset.name.endsWith('/main.js')
     );
 
     if (!manifestAsset) {
       throw new Error(`manifest.json not found in latest release ${latestTag}`);
     }
     if (!indexAsset) {
-      throw new Error(`index.js not found in latest release ${latestTag}`);
+      throw new Error(`main.js not found in latest release ${latestTag}`);
     }
 
     const manifestContent = await downloadFile(manifestAsset.browser_download_url);
