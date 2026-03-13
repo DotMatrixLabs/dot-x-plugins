@@ -156,6 +156,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
     funding_url?: string;          // Optional funding URL
     integrity_hash: string;        // SHA-256 hash of manifest.json + main.js
     approved_permissions: string[]; // Approved permissions
+    likes: number;                 // Like count
     downloads: number;             // Download count
     manifest_url: string;          // URL to manifest.json asset
     index_url: string;             // URL to main.js asset
@@ -179,7 +180,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
 ### Registry Generation Workflow
 
 **Triggers:**
-- Scheduled: Every 12 hours
+- Scheduled: Every 4 hours
 - Push to main branch (when `plugins-source.json` changes)
 - Manual dispatch
 
@@ -191,7 +192,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
    - If version unchanged: updates mutable fields (name, description, tags, etc.) only
    - If version changed: downloads `manifest.json` and `main.js`, calculates hash, extracts permissions and `dotxVersion`
    - Creates security review PR if permissions expanded during scheduled update
-3. Generates `dist/marketplace-registry.json`
+3. Fetches the latest `likes` and `downloads` from Supabase and merges them into `dist/marketplace-registry.json`
 4. Deploys to GitHub Pages
 5. Commits changes to repository
 
@@ -223,6 +224,13 @@ The registry prevents "Trojanning" attacks through immutable hashes, hash verifi
 3. Test registry generation (requires GITHUB_TOKEN):
    ```bash
    GITHUB_TOKEN=your_token node .github/scripts/generate-registry.js
+   ```
+
+4. Apply the stats schema and deploy the functions with the Supabase CLI:
+   ```bash
+   npx supabase db push
+   npx supabase functions deploy set-plugin-like
+   npx supabase functions deploy record-plugin-download
    ```
 
 ## Contributing

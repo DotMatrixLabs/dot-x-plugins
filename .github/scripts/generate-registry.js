@@ -56,6 +56,31 @@ function githubApiRequest(url, token, options = {}) {
   });
 }
 
+function httpJsonRequest(url, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const req = https.request({
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: 'GET',
+      headers,
+    }, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          resolve(data ? JSON.parse(data) : []);
+        } else {
+          reject(new Error(`HTTP ${res.statusCode} - ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.end();
+  });
+}
+
 function downloadFile(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
@@ -157,7 +182,6 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       console.log(`⏭️  Skipping ${sourcePlugin.name} (${sourcePlugin.id}) - version unchanged (${latestTag})`);
       return {
         ...existingPlugin,
-        downloads: existingPlugin.downloads || 0,
         id: sourcePlugin.id,
         name: sourcePlugin.name,
         description: sourcePlugin.description,
@@ -213,6 +237,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
         approved_permissions: existingPlugin.approved_permissions || [],
         manifest_url: manifestAsset.browser_download_url,
         index_url: indexAsset.browser_download_url,
+        likes: existingPlugin?.likes || 0,
         downloads: existingPlugin?.downloads || 0
       };
 
@@ -233,6 +258,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       author: sourcePlugin.author,
       integrity_hash: integrityHash,
       approved_permissions: permissions,
+      likes: existingPlugin?.likes || 0,
       downloads: existingPlugin?.downloads || 0,
       manifest_url: manifestAsset.browser_download_url,
       index_url: indexAsset.browser_download_url
@@ -245,6 +271,45 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
     }
     throw error;
   }
+}
+
+async function fetchPluginStats() {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    console.warn('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. Reusing existing registry stats.');
+    return null;
+  }
+
+  const normalizedUrl = supabaseUrl.replace(/\/+$/, '');
+  const statsUrl = `${normalizedUrl}/rest/v1/plugin_stats_rollup?select=plugin_id,likes,downloads`;
+  const rows = await httpJsonRequest(statsUrl, {
+    'apikey': serviceRoleKey,
+    'Authorization': `Bearer ${serviceRoleKey}`,
+    'Accept': 'application/json'
+  });
+
+  return new Map((rows || []).map((row) => [
+    row.plugin_id,
+    {
+      likes: Number(row.likes || 0),
+      downloads: Number(row.downloads || 0),
+    }
+  ]));
+}
+
+function mergePluginStats(plugins, existingPluginsMap, statsMap) {
+  return plugins.map((plugin) => {
+    const existingPlugin = existingPluginsMap.get(plugin.id) || {};
+    const stats = statsMap?.get(plugin.id);
+
+    return {
+      ...plugin,
+      likes: stats ? stats.likes : Number(existingPlugin.likes || 0),
+      downloads: stats ? stats.downloads : Number(existingPlugin.downloads || 0),
+    };
+  });
 }
 
 async function main() {
@@ -280,7 +345,6 @@ async function main() {
   });
 
   const processedPlugins = [];
-  let hasChanges = false;
 
   for (const sourcePlugin of sourceData.plugins || []) {
     const existingPlugin = existingPluginsMap.get(sourcePlugin.id);
@@ -292,21 +356,24 @@ async function main() {
       triggerType
     );
 
-    if (!existingPlugin || JSON.stringify(existingPlugin) !== JSON.stringify(processed)) {
-      hasChanges = true;
-    }
-
     processedPlugins.push(processed);
   }
+
+  const statsMap = await fetchPluginStats();
+  const finalPlugins = mergePluginStats(processedPlugins, existingPluginsMap, statsMap);
+  const hasChanges = finalPlugins.some((plugin) => {
+    const existingPlugin = existingPluginsMap.get(plugin.id);
+    return !existingPlugin || JSON.stringify(existingPlugin) !== JSON.stringify(plugin);
+  });
 
   // Write registry
   const newRegistry = {
     generated_at: new Date().toISOString(),
-    plugins: processedPlugins
+    plugins: finalPlugins
   };
 
   fs.writeFileSync(registryFile, JSON.stringify(newRegistry, null, 2));
-  console.log(`✅ Registry generated: ${processedPlugins.length} plugin(s)`);
+  console.log(`✅ Registry generated: ${finalPlugins.length} plugin(s)`);
 
   // Write output for GitHub Actions
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
@@ -325,4 +392,3 @@ main().catch(error => {
   console.error('Fatal error:', error);
   process.exit(1);
 });
-

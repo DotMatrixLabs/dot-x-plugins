@@ -1,5 +1,5 @@
 {
-  "generated_at": "2025-12-22T17:12:06.222Z",
+  "generated_at": "2026-03-13T15:51:54.092Z",
   "plugins": [
     {
       "id": "hello-world",
@@ -17,6 +17,7 @@
       "approved_permissions": [
         "env"
       ],
+      "likes": 0,
       "downloads": 0,
       "manifest_url": "https://github.com/DotMatrixLabs/hello-world-plugin/releases/download/v0.0.1/manifest.json",
       "index_url": "https://github.com/DotMatrixLabs/hello-world-plugin/releases/download/v0.0.1/main.js"
