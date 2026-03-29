@@ -49,7 +49,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 ### Marketplace Release Format: Archive Package
 
-The Dot X marketplace installer now downloads exactly one package asset per release:
+The Dot X marketplace installer downloads exactly one package asset per release:
 
 - `plugin.zip`
 
