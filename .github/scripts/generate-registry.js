@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const https = require('https');
+const AdmZip = require('adm-zip');
 
 const sourceFile = path.join(process.cwd(), 'plugins-source.json');
 const registryFile = path.join(process.cwd(), 'dist', 'marketplace-registry.json');
@@ -19,15 +20,15 @@ function githubApiRequest(url, token, options = {}) {
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const postData = options.body ? JSON.stringify(options.body) : null;
-    
+
     const reqOptions = {
       hostname: urlObj.hostname,
       path: urlObj.pathname + urlObj.search,
       method: options.method || 'GET',
       headers: {
-        'Authorization': `token ${token}`,
+        Authorization: `token ${token}`,
         'User-Agent': 'dot-x-plugins-registry',
-        'Accept': 'application/vnd.github.v3+json'
+        Accept: 'application/vnd.github.v3+json'
       }
     };
 
@@ -81,32 +82,89 @@ function httpJsonRequest(url, headers = {}) {
   });
 }
 
-function downloadFile(url) {
+function downloadBuffer(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
       if (res.statusCode === 302 || res.statusCode === 301) {
-        return downloadFile(res.headers.location).then(resolve).catch(reject);
+        return downloadBuffer(res.headers.location).then(resolve).catch(reject);
       }
       if (res.statusCode !== 200) {
         return reject(new Error(`HTTP ${res.statusCode}: ${url}`));
       }
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(data));
+      const chunks = [];
+      res.on('data', chunk => chunks.push(chunk));
+      res.on('end', () => resolve(Buffer.concat(chunks)));
     }).on('error', reject);
   });
 }
 
-function calculateCombinedHash(manifestContent, indexContent) {
-  const combined = manifestContent + '\n---SEPARATOR---\n' + indexContent;
-  const hash = crypto.createHash('sha256').update(combined, 'utf8').digest('hex');
-  return `sha256-${hash}`;
+function calculatePackageHash(packageBuffer) {
+  return `sha256-${crypto.createHash('sha256').update(packageBuffer).digest('hex')}`;
 }
 
 function detectPermissionExpansion(currentPerms, newPerms) {
   const currentSet = new Set(currentPerms || []);
   const newSet = new Set(newPerms || []);
   return Array.from(newSet).some(p => !currentSet.has(p));
+}
+
+function selectPackageAsset(release) {
+  const zipAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.zip'));
+  const preferred = zipAssets.find(asset => asset.name === 'plugin.zip');
+  if (preferred) {
+    return preferred;
+  }
+  if (zipAssets.length === 1) {
+    return zipAssets[0];
+  }
+  if (zipAssets.length === 0) {
+    throw new Error(`No zip asset found in latest release ${release.tag_name}`);
+  }
+  throw new Error(
+    `Multiple zip assets found in latest release ${release.tag_name}. Upload plugin.zip or leave exactly one zip asset in the release.`
+  );
+}
+
+function inspectPackageBuffer(packageBuffer, sourcePluginId) {
+  const zip = new AdmZip(packageBuffer);
+  const entries = zip.getEntries().filter(entry => !entry.isDirectory);
+
+  const manifestEntry = entries.find(entry => entry.entryName === 'manifest.json');
+  const mainEntry = entries.find(entry => entry.entryName === 'main.js');
+
+  if (!manifestEntry) {
+    throw new Error('plugin package must contain manifest.json at the archive root');
+  }
+  if (!mainEntry) {
+    throw new Error('plugin package must contain main.js at the archive root');
+  }
+
+  const manifest = JSON.parse(manifestEntry.getData().toString('utf8'));
+  if (manifest.id !== sourcePluginId) {
+    throw new Error(`Plugin ID mismatch: expected ${sourcePluginId}, found ${manifest.id} in manifest.json`);
+  }
+  if (!manifest.version || typeof manifest.version !== 'string') {
+    throw new Error('manifest.json is missing a string "version" field');
+  }
+  if (!manifest.dotxVersion || typeof manifest.dotxVersion !== 'string') {
+    throw new Error('manifest.json is missing a string "dotxVersion" field');
+  }
+  if (!Array.isArray(manifest.permissions)) {
+    throw new Error('manifest.json is missing a "permissions" array');
+  }
+  if (manifest.permissions.some(permission => typeof permission !== 'string')) {
+    throw new Error('manifest.json permissions must contain only strings');
+  }
+  if (manifest.main && manifest.main !== 'main.js') {
+    throw new Error(`manifest.json must reference "main.js" for the marketplace package format. Found: ${manifest.main}`);
+  }
+
+  return {
+    manifest,
+    version: manifest.version,
+    permissions: manifest.permissions,
+    dotxVersion: manifest.dotxVersion,
+  };
 }
 
 async function createSecurityReviewPR(plugin, token, repository) {
@@ -127,21 +185,16 @@ Please review the permission changes and manually approve this update in the reg
 
 **Repository:** ${plugin.repo}
 **Release:** ${plugin.version}
-**Integrity Hash:** ${plugin.integrity_hash}
+**Package URL:** ${plugin.package_url}
+**Package Integrity Hash:** ${plugin.package_integrity_hash}
 `;
 
   try {
-    // Create a branch for the PR
     const branchName = `security-review-${plugin.id.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`;
-    
-    // Get default branch
     const repoInfo = await githubApiRequest(`https://api.github.com/repos/${owner}/${repo}`, token);
     const defaultBranch = repoInfo.default_branch;
-    
-    // Get latest commit SHA
     const ref = await githubApiRequest(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${defaultBranch}`, token);
-    
-    // Create new branch
+
     await githubApiRequest(`https://api.github.com/repos/${owner}/${repo}/git/refs`, token, {
       method: 'POST',
       body: {
@@ -150,7 +203,6 @@ Please review the permission changes and manually approve this update in the reg
       }
     });
 
-    // Create PR
     const pr = await githubApiRequest(`https://api.github.com/repos/${owner}/${repo}/pulls`, token, {
       method: 'POST',
       body: {
@@ -169,17 +221,27 @@ Please review the permission changes and manually approve this update in the reg
   }
 }
 
-
 async function processPlugin(sourcePlugin, existingPlugin, token, repository, triggerType) {
   const { owner, repo } = parseGitHubUrl(sourcePlugin.repo);
-  
+
   try {
     const releaseUrl = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
     const release = await githubApiRequest(releaseUrl, token);
     const latestTag = release.tag_name;
+    console.log(`Processing ${sourcePlugin.name} (${sourcePlugin.id}) - latest release: ${latestTag}...`);
+    const packageAsset = selectPackageAsset(release);
+    const packageBuffer = await downloadBuffer(packageAsset.browser_download_url);
+    const { version, permissions, dotxVersion } = inspectPackageBuffer(packageBuffer, sourcePlugin.id);
+    const packageIntegrityHash = calculatePackageHash(packageBuffer);
+    const hasPackageFields = Boolean(
+      existingPlugin &&
+      existingPlugin.package_url &&
+      existingPlugin.package_integrity_hash &&
+      existingPlugin.package_format
+    );
 
-    if (existingPlugin && existingPlugin.version === latestTag) {
-      console.log(`⏭️  Skipping ${sourcePlugin.name} (${sourcePlugin.id}) - version unchanged (${latestTag})`);
+    if (existingPlugin && existingPlugin.version === version && hasPackageFields) {
+      console.log(`Skipping ${sourcePlugin.name} (${sourcePlugin.id}) - version unchanged (${version})`);
       return {
         ...existingPlugin,
         id: sourcePlugin.id,
@@ -191,58 +253,28 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       };
     }
 
-    console.log(`📦 Processing ${sourcePlugin.name} (${sourcePlugin.id}) - latest release: ${latestTag}...`);
-
-    const manifestAsset = release.assets.find(asset => 
-      asset.name === 'manifest.json' || asset.name.endsWith('/manifest.json')
-    );
-    const indexAsset = release.assets.find(asset => 
-      asset.name === 'main.js' || asset.name.endsWith('/main.js')
-    );
-
-    if (!manifestAsset) {
-      throw new Error(`manifest.json not found in latest release ${latestTag}`);
-    }
-    if (!indexAsset) {
-      throw new Error(`main.js not found in latest release ${latestTag}`);
-    }
-
-    const manifestContent = await downloadFile(manifestAsset.browser_download_url);
-    const indexContent = await downloadFile(indexAsset.browser_download_url);
-
-    const manifest = JSON.parse(manifestContent);
-    
-    if (manifest.id !== sourcePlugin.id) {
-      throw new Error(`Plugin ID mismatch: expected ${sourcePlugin.id}, found ${manifest.id} in manifest.json`);
-    }
-    
-    const permissions = manifest.permissions || [];
-    const dotxVersion = manifest.dotxVersion || null;
-
-    const integrityHash = calculateCombinedHash(manifestContent, indexContent);
-
     const hasExpansion = existingPlugin && detectPermissionExpansion(
       existingPlugin.approved_permissions || [],
       permissions
     );
 
     if (hasExpansion && triggerType === 'schedule') {
-      console.log(`⚠️  Permission expansion detected for ${sourcePlugin.name} (${sourcePlugin.id}). Creating security review PR...`);
-      
+      console.log(`Permission expansion detected for ${sourcePlugin.name} (${sourcePlugin.id}). Creating security review PR...`);
+
       const pluginData = {
         ...sourcePlugin,
-        version: latestTag,
-        integrity_hash: integrityHash,
-        permissions: permissions,
+        version,
+        package_integrity_hash: packageIntegrityHash,
+        package_url: packageAsset.browser_download_url,
+        package_format: 'zip',
+        package_size: Number(packageAsset.size || packageBuffer.length || 0),
+        permissions,
         approved_permissions: existingPlugin.approved_permissions || [],
-        manifest_url: manifestAsset.browser_download_url,
-        index_url: indexAsset.browser_download_url,
         likes: existingPlugin?.likes || 0,
         downloads: existingPlugin?.downloads || 0
       };
 
       await createSecurityReviewPR(pluginData, token, repository);
-      
       return existingPlugin;
     }
 
@@ -251,21 +283,21 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       name: sourcePlugin.name,
       description: sourcePlugin.description,
       repo: sourcePlugin.repo,
-      version: latestTag,
-      dotxVersion: dotxVersion,
+      version,
+      dotxVersion,
       tags: sourcePlugin.tags,
       funding_url: sourcePlugin.funding_url,
       author: sourcePlugin.author,
-      integrity_hash: integrityHash,
+      package_url: packageAsset.browser_download_url,
+      package_format: 'zip',
+      package_integrity_hash: packageIntegrityHash,
+      package_size: Number(packageAsset.size || packageBuffer.length || 0),
       approved_permissions: permissions,
       likes: existingPlugin?.likes || 0,
       downloads: existingPlugin?.downloads || 0,
-      manifest_url: manifestAsset.browser_download_url,
-      index_url: indexAsset.browser_download_url
     };
-
   } catch (error) {
-    console.error(`❌ Failed to process ${sourcePlugin.name} (${sourcePlugin.id}): ${error.message}`);
+    console.error(`Failed to process ${sourcePlugin.name} (${sourcePlugin.id}): ${error.message}`);
     if (existingPlugin) {
       return existingPlugin;
     }
@@ -285,9 +317,9 @@ async function fetchPluginStats() {
   const normalizedUrl = supabaseUrl.replace(/\/+$/, '');
   const statsUrl = `${normalizedUrl}/rest/v1/plugin_stats_rollup?select=plugin_id,likes,downloads`;
   const rows = await httpJsonRequest(statsUrl, {
-    'apikey': serviceRoleKey,
-    'Authorization': `Bearer ${serviceRoleKey}`,
-    'Accept': 'application/json'
+    apikey: serviceRoleKey,
+    Authorization: `Bearer ${serviceRoleKey}`,
+    Accept: 'application/json'
   });
 
   return new Map((rows || []).map((row) => [
@@ -322,20 +354,17 @@ async function main() {
     process.exit(1);
   }
 
-  // Load source
   if (!fs.existsSync(sourceFile)) {
     console.error('Error: plugins-source.json not found');
     process.exit(1);
   }
   const sourceData = JSON.parse(fs.readFileSync(sourceFile, 'utf8'));
 
-  // Load existing registry
   let existingRegistry = { generated_at: new Date().toISOString(), plugins: [] };
   if (fs.existsSync(registryFile)) {
     existingRegistry = JSON.parse(fs.readFileSync(registryFile, 'utf8'));
   }
 
-  // Create dist directory
   fs.mkdirSync(path.dirname(registryFile), { recursive: true });
 
   const existingPluginsMap = new Map();
@@ -345,7 +374,6 @@ async function main() {
   });
 
   const processedPlugins = [];
-
   for (const sourcePlugin of sourceData.plugins || []) {
     const existingPlugin = existingPluginsMap.get(sourcePlugin.id);
     const processed = await processPlugin(
@@ -366,25 +394,22 @@ async function main() {
     return !existingPlugin || JSON.stringify(existingPlugin) !== JSON.stringify(plugin);
   });
 
-  // Write registry
   const newRegistry = {
     generated_at: new Date().toISOString(),
     plugins: finalPlugins
   };
 
   fs.writeFileSync(registryFile, JSON.stringify(newRegistry, null, 2));
-  console.log(`✅ Registry generated: ${finalPlugins.length} plugin(s)`);
+  console.log(`Registry generated: ${finalPlugins.length} plugin(s)`);
 
-  // Write output for GitHub Actions
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   fs.writeFileSync(outputFile, JSON.stringify({ has_changes: hasChanges }, null, 2));
-  
-  // Set output for GitHub Actions (using GITHUB_OUTPUT)
+
   const githubOutput = process.env.GITHUB_OUTPUT;
   if (githubOutput) {
     fs.appendFileSync(githubOutput, `has_changes=${hasChanges}\n`);
   }
-  
+
   process.exit(0);
 }
 

@@ -29,7 +29,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 #### Integrity Verification
 - SHA-256 hash calculated at approval time
-- Hash includes both `manifest.json` and `main.js` files
+- Hash covers the raw `plugin.zip` bytes
 - App verifies hash before installation
 - Any byte change invalidates the hash and blocks installation
 
@@ -44,9 +44,31 @@ This repository serves as the official plugin marketplace for Dot X.
 
 1. Your plugin must be published as a GitHub Release
 2. The latest release must include:
-   - `manifest.json` - Plugin manifest including id, permissions, and dotxVersion
-   - `main.js` - The plugin code
+   - `plugin.zip` - A self-contained plugin package zip
 3. The `id` field in your `manifest.json` must match the `id` you specify in `plugins-source.json`
+
+### Marketplace Release Format: Archive Package
+
+The Dot X marketplace installer now downloads exactly one package asset per release:
+
+- `plugin.zip`
+
+If `plugin.zip` is not present, registry validation falls back to the only `.zip` asset in the release, but only when there is exactly one zip asset total. If there are multiple zip assets and none is named `plugin.zip`, validation fails.
+
+The archive root must contain:
+
+- `manifest.json`
+- `main.js`
+
+The archive may also contain additional files and directories, such as:
+
+- `bin/windows-x64/...`
+- `bin/windows-arm64/...`
+- `bin/macos-x64/...`
+- `bin/macos-arm64/...`
+- `bin/linux-x64/...`
+- `assets/...`
+- `data/...`
 
 ### Submission Process
 
@@ -74,7 +96,8 @@ This repository serves as the official plugin marketplace for Dot X.
    - The PR validation workflow will automatically:
      - Validate JSON schema
      - Verify the GitHub repo and latest release exist
-     - Download and analyze `manifest.json` from the latest release
+     - Select `plugin.zip`, or fall back to the only zip asset in the release if exactly one exists
+     - Open the package and verify root `manifest.json` and `main.js`
      - Verify the `id` in `manifest.json` matches your submission
      - Post a comment listing detected permissions
 
@@ -84,7 +107,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 ### Plugin Manifest Format
 
-Your `manifest.json` must be included in your GitHub release assets and should follow this structure:
+Your `manifest.json` must be included inside `plugin.zip` and should follow this structure:
 
 ```json
 {
@@ -94,7 +117,7 @@ Your `manifest.json` must be included in your GitHub release assets and should f
   "description": "Plugin description",
   "author": "Your Name",
   "dotxVersion": ">=1.0.0",
-  "main": "main.ts",
+  "main": "main.js",
   "permissions": [
     "env"
   ],
@@ -119,7 +142,20 @@ Your `manifest.json` must be included in your GitHub release assets and should f
 - `run` - Subprocess execution
 - `ffi` - Foreign function interface access
 
-**Note:** The registry automatically uses the **latest release** from your repository. Make sure your latest release includes both `manifest.json` and `main.js`.
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `plugin.zip`, or exactly one zip asset that contains root `manifest.json` and `main.js`.
+
+### Publishing Checklist for the Package Format
+
+Before you publish a GitHub Release, make sure:
+
+1. Your plugin is built to a single `main.js` bundle.
+2. `manifest.json` references the compiled entrypoint with `"main": "main.js"`.
+3. Place `manifest.json`, `main.js`, and any required binaries/assets into a staging directory.
+4. Create `plugin.zip` from that staging directory, with `manifest.json` and `main.js` at the archive root.
+5. The `id` in `manifest.json` matches the `id` in `plugins-source.json`.
+6. The latest release is the one you want Dot X to install from.
+
+If you currently publish from GitHub Releases, you do not need a different hosting setup. You only need to make sure the release contains a self-contained zip package.
 
 ## Registry Schema
 
@@ -149,17 +185,18 @@ Your `manifest.json` must be included in your GitHub release assets and should f
     name: string;                  // Display name
     description: string;           // Description
     repo: string;                 // Repository URL
-    version: string;               // Latest release tag
+    version: string;               // Plugin version from packaged manifest.json
     dotxVersion: string | null;    // Minimum Dot X version from manifest
     tags: string[];                // Tags
     author: string;                // Author
     funding_url?: string;          // Optional funding URL
-    integrity_hash: string;        // SHA-256 hash of manifest.json + main.js
+    package_url: string;           // URL to plugin.zip asset
+    package_format: "zip";         // Package format
+    package_integrity_hash: string; // SHA-256 hash of plugin.zip bytes
+    package_size?: number;         // Package size in bytes
     approved_permissions: string[]; // Approved permissions
     likes: number;                 // Like count
     downloads: number;             // Download count
-    manifest_url: string;          // URL to manifest.json asset
-    index_url: string;             // URL to main.js asset
   }>
 }
 ```
@@ -173,9 +210,11 @@ Your `manifest.json` must be included in your GitHub release assets and should f
 **Actions:**
 1. Validates JSON schema
 2. Verifies GitHub repo and latest release exist
-3. Downloads `manifest.json` from latest release and verifies `id` matches
-4. Extracts permissions from manifest
-5. Posts PR comment with permission summary
+3. Selects `plugin.zip`, or falls back to the only zip asset in the release if exactly one exists
+4. Opens the package and verifies root `manifest.json` and `main.js`
+5. Verifies `manifest.json` id matches the submission
+6. Extracts permissions from the packaged manifest
+7. Posts PR comment with permission summary
 
 ### Registry Generation Workflow
 
@@ -188,9 +227,9 @@ Your `manifest.json` must be included in your GitHub release assets and should f
 1. Loads source and existing registry
 2. For each plugin:
    - Fetches the latest GitHub release
-   - Compares latest release tag to stored version
-   - If version unchanged: updates mutable fields (name, description, tags, etc.) only
-   - If version changed: downloads `manifest.json` and `main.js`, calculates hash, extracts permissions and `dotxVersion`
+   - Selects `plugin.zip` or the only zip asset, downloads it, hashes the raw archive, opens the package, and extracts `version`, permissions, and `dotxVersion`
+   - If packaged version unchanged: updates mutable fields (name, description, tags, etc.) only
+   - If packaged version changed: updates the registry entry to the new package metadata
    - Creates security review PR if permissions expanded during scheduled update
 3. Fetches the latest `likes` and `downloads` from Supabase and merges them into `dist/marketplace-registry.json`
 4. Deploys to GitHub Pages
