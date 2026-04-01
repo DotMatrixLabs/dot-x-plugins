@@ -1,26 +1,27 @@
 {
-  "generated_at": "2026-03-13T20:43:20.883Z",
+  "generated_at": "2026-04-01T17:25:00.066Z",
   "plugins": [
     {
       "id": "hello-world",
       "name": "Hello World",
       "description": "Hello World demo plugin",
       "repo": "https://github.com/DotMatrixLabs/hello-world-plugin",
-      "version": "v0.0.1",
+      "version": "0.0.2",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "example",
         "hello-world"
       ],
       "author": "DotMatrixLabs",
-      "integrity_hash": "sha256-e505820332328bdeedef4bfff81060541bae9ae5f29c7f8430be2c4f863e8e14",
+      "package_url": "https://github.com/DotMatrixLabs/hello-world-plugin/releases/download/v0.0.2/plugin.zip",
+      "package_format": "zip",
+      "package_integrity_hash": "sha256-2003b15e2808509cdebaa3d3eb9727d7c48fa28dfb64380a73fddae385289823",
+      "package_size": 98409,
       "approved_permissions": [
         "env"
       ],
       "likes": 1,
-      "downloads": 0,
-      "manifest_url": "https://github.com/DotMatrixLabs/hello-world-plugin/releases/download/v0.0.1/manifest.json",
-      "index_url": "https://github.com/DotMatrixLabs/hello-world-plugin/releases/download/v0.0.1/main.js"
+      "downloads": 0
     }
   ]
 }
