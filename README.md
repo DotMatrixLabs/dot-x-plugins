@@ -53,8 +53,6 @@ The Dot X marketplace installer downloads exactly one package asset per release:
 
 - `<plugin-name>.dotxplugin`
 
-If no `.dotxplugin` asset is present, registry validation falls back to the only `.zip` asset in the release, but only when there is exactly one zip asset total. If there are multiple zip assets and none exists, validation fails.
-
 The archive root must contain:
 
 - `manifest.json`
@@ -96,7 +94,7 @@ The archive may also contain additional files and directories, such as:
    - The PR validation workflow will automatically:
      - Validate JSON schema
      - Verify the GitHub repo and latest release exist
-     - Select `<plugin-name>.dotxplugin`, or fall back to the only zip asset if exactly one exists
+     - Select `<plugin-name>.dotxplugin` and verify it is a valid plugin package
      - Open the package and verify root `manifest.json` and `main.js`
      - Verify the `id` in `manifest.json` matches your submission
      - Post a comment listing detected permissions
@@ -142,7 +140,7 @@ Your `manifest.json` must be included inside `<plugin-name>.dotxplugin` and shou
 - `run` - Subprocess execution
 - `ffi` - Foreign function interface access
 
-**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `<plugin-name>.dotxplugin`, or exactly one zip asset that contains root `manifest.json` and `main.js`.
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `<plugin-name>.dotxplugin` containing root `manifest.json` and `main.js`.
 
 ### Publishing Checklist for the Package Format
 
@@ -210,7 +208,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 **Actions:**
 1. Validates JSON schema
 2. Verifies GitHub repo and latest release exist
-3. Selects `<plugin-name>.dotxplugin`, or falls back to the only zip asset if exactly one exists
+3. Selects `<plugin-name>.dotxplugin` and verifies it is a valid plugin package
 4. Opens the package and verifies root `manifest.json` and `main.js`
 5. Verifies `manifest.json` id matches the submission
 6. Extracts permissions from the packaged manifest
@@ -227,7 +225,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 1. Loads source and existing registry
 2. For each plugin:
    - Fetches the latest GitHub release
-   - Selects `<plugin-name>.dotxplugin` or the only zip asset, downloads it, hashes the raw archive, opens the package, and extracts `version`, permissions, and `dotxVersion`
+   - Selects `<plugin-name>.dotxplugin`, downloads it, hashes the raw archive, opens the package, and extracts `version`, permissions, and `dotxVersion`
    - If packaged version unchanged: updates mutable fields (name, description, tags, etc.) only
    - If packaged version changed: updates the registry entry to the new package metadata
    - Creates security review PR if permissions expanded during scheduled update

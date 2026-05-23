@@ -109,7 +109,6 @@ function detectPermissionExpansion(currentPerms, newPerms) {
 }
 
 function selectPackageAsset(release) {
-  // Prefer .dotxplugin (current format).
   const dotxAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.dotxplugin'));
   if (dotxAssets.length === 1) {
     return dotxAssets[0];
@@ -119,22 +118,7 @@ function selectPackageAsset(release) {
       `Multiple .dotxplugin assets found in latest release ${release.tag_name}. Leave exactly one .dotxplugin asset in the release.`
     );
   }
-
-  // Fall back to .zip for plugins that haven't migrated yet.
-  const zipAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.zip'));
-  const preferred = zipAssets.find(asset => asset.name === 'plugin.zip');
-  if (preferred) {
-    return preferred;
-  }
-  if (zipAssets.length === 1) {
-    return zipAssets[0];
-  }
-  if (zipAssets.length === 0) {
-    throw new Error(`No .dotxplugin asset found in latest release ${release.tag_name}`);
-  }
-  throw new Error(
-    `Multiple zip assets found in latest release ${release.tag_name}. Upload a single .dotxplugin file or leave exactly one zip asset.`
-  );
+  throw new Error(`No .dotxplugin asset found in latest release ${release.tag_name}`);
 }
 
 function inspectPackageBuffer(packageBuffer, sourcePluginId) {
