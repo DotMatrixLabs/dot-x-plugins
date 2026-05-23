@@ -385,7 +385,14 @@ async function main() {
 
   const statsMap = await fetchPluginStats();
   const finalPlugins = mergePluginStats(processedPlugins, existingPluginsMap, statsMap);
-  const hasChanges = finalPlugins.some((plugin) => {
+
+  const finalPluginIds = new Set(finalPlugins.map(p => p.id));
+  const removedPlugins = (existingRegistry.plugins || []).filter(p => !finalPluginIds.has(p.id || p.name));
+  if (removedPlugins.length > 0) {
+    console.log(`Removing ${removedPlugins.length} plugin(s) from registry: ${removedPlugins.map(p => p.id).join(', ')}`);
+  }
+
+  const hasChanges = removedPlugins.length > 0 || finalPlugins.some((plugin) => {
     const existingPlugin = existingPluginsMap.get(plugin.id);
     return !existingPlugin || JSON.stringify(existingPlugin) !== JSON.stringify(plugin);
   });
