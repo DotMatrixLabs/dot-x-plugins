@@ -109,14 +109,14 @@ function detectPermissionExpansion(currentPerms, newPerms) {
 }
 
 function selectPackageAsset(release) {
-  // Prefer .dotx (current format).
-  const dotxAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.dotx'));
+  // Prefer .dotxplugin (current format).
+  const dotxAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.dotxplugin'));
   if (dotxAssets.length === 1) {
     return dotxAssets[0];
   }
   if (dotxAssets.length > 1) {
     throw new Error(
-      `Multiple .dotx assets found in latest release ${release.tag_name}. Leave exactly one .dotx asset in the release.`
+      `Multiple .dotxplugin assets found in latest release ${release.tag_name}. Leave exactly one .dotxplugin asset in the release.`
     );
   }
 
@@ -130,10 +130,10 @@ function selectPackageAsset(release) {
     return zipAssets[0];
   }
   if (zipAssets.length === 0) {
-    throw new Error(`No .dotx asset found in latest release ${release.tag_name}`);
+    throw new Error(`No .dotxplugin asset found in latest release ${release.tag_name}`);
   }
   throw new Error(
-    `Multiple zip assets found in latest release ${release.tag_name}. Upload a single .dotx file or leave exactly one zip asset.`
+    `Multiple zip assets found in latest release ${release.tag_name}. Upload a single .dotxplugin file or leave exactly one zip asset.`
   );
 }
 
@@ -158,7 +158,7 @@ function inspectPackageBuffer(packageBuffer, sourcePluginId) {
   if (!manifest.version || typeof manifest.version !== 'string') {
     throw new Error('manifest.json is missing a string "version" field');
   }
-  if (!manifest.dotxVersion || typeof manifest.dotxVersion !== 'string') {
+  if (!manifest.dotxpluginVersion || typeof manifest.dotxpluginVersion !== 'string') {
     throw new Error('manifest.json is missing a string "dotxVersion" field');
   }
   if (!Array.isArray(manifest.permissions)) {
@@ -175,7 +175,7 @@ function inspectPackageBuffer(packageBuffer, sourcePluginId) {
     manifest,
     version: manifest.version,
     permissions: manifest.permissions,
-    dotxVersion: manifest.dotxVersion,
+    dotxVersion: manifest.dotxpluginVersion,
   };
 }
 
