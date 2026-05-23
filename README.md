@@ -29,7 +29,7 @@ This repository serves as the official plugin marketplace for Dot X.
 
 #### Integrity Verification
 - SHA-256 hash calculated at approval time
-- Hash covers the raw `plugin.zip` bytes
+- Hash covers the raw `<plugin-name>.dotxplugin` bytes
 - App verifies hash before installation
 - Any byte change invalidates the hash and blocks installation
 
@@ -44,16 +44,16 @@ This repository serves as the official plugin marketplace for Dot X.
 
 1. Your plugin must be published as a GitHub Release
 2. The latest release must include:
-   - `plugin.zip` - A self-contained plugin package zip
+   - `<plugin-name>.dotxplugin` - A self-contained plugin package
 3. The `id` field in your `manifest.json` must match the `id` you specify in `plugins-source.json`
 
 ### Marketplace Release Format: Archive Package
 
 The Dot X marketplace installer downloads exactly one package asset per release:
 
-- `plugin.zip`
+- `<plugin-name>.dotxplugin`
 
-If `plugin.zip` is not present, registry validation falls back to the only `.zip` asset in the release, but only when there is exactly one zip asset total. If there are multiple zip assets and none is named `plugin.zip`, validation fails.
+If no `.dotxplugin` asset is present, registry validation falls back to the only `.zip` asset in the release, but only when there is exactly one zip asset total. If there are multiple zip assets and none exists, validation fails.
 
 The archive root must contain:
 
@@ -96,7 +96,7 @@ The archive may also contain additional files and directories, such as:
    - The PR validation workflow will automatically:
      - Validate JSON schema
      - Verify the GitHub repo and latest release exist
-     - Select `plugin.zip`, or fall back to the only zip asset in the release if exactly one exists
+     - Select `<plugin-name>.dotxplugin`, or fall back to the only zip asset if exactly one exists
      - Open the package and verify root `manifest.json` and `main.js`
      - Verify the `id` in `manifest.json` matches your submission
      - Post a comment listing detected permissions
@@ -107,7 +107,7 @@ The archive may also contain additional files and directories, such as:
 
 ### Plugin Manifest Format
 
-Your `manifest.json` must be included inside `plugin.zip` and should follow this structure:
+Your `manifest.json` must be included inside `<plugin-name>.dotxplugin` and should follow this structure:
 
 ```json
 {
@@ -142,7 +142,7 @@ Your `manifest.json` must be included inside `plugin.zip` and should follow this
 - `run` - Subprocess execution
 - `ffi` - Foreign function interface access
 
-**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `plugin.zip`, or exactly one zip asset that contains root `manifest.json` and `main.js`.
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `<plugin-name>.dotxplugin`, or exactly one zip asset that contains root `manifest.json` and `main.js`.
 
 ### Publishing Checklist for the Package Format
 
@@ -151,7 +151,7 @@ Before you publish a GitHub Release, make sure:
 1. Your plugin is built to a single `main.js` bundle.
 2. `manifest.json` references the compiled entrypoint with `"main": "main.js"`.
 3. Place `manifest.json`, `main.js`, and any required binaries/assets into a staging directory.
-4. Create `plugin.zip` from that staging directory, with `manifest.json` and `main.js` at the archive root.
+4. Create `<plugin-name>.dotxplugin` from that staging directory, with `manifest.json` and `main.js` at the archive root.
 5. The `id` in `manifest.json` matches the `id` in `plugins-source.json`.
 6. The latest release is the one you want Dot X to install from.
 
@@ -190,9 +190,9 @@ If you currently publish from GitHub Releases, you do not need a different hosti
     tags: string[];                // Tags
     author: string;                // Author
     funding_url?: string;          // Optional funding URL
-    package_url: string;           // URL to plugin.zip asset
+    package_url: string;           // URL to <plugin-name>.dotxplugin asset
     package_format: "zip";         // Package format
-    package_integrity_hash: string; // SHA-256 hash of plugin.zip bytes
+    package_integrity_hash: string; // SHA-256 hash of <plugin-name>.dotxplugin bytes
     package_size?: number;         // Package size in bytes
     approved_permissions: string[]; // Approved permissions
     likes: number;                 // Like count
@@ -210,7 +210,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 **Actions:**
 1. Validates JSON schema
 2. Verifies GitHub repo and latest release exist
-3. Selects `plugin.zip`, or falls back to the only zip asset in the release if exactly one exists
+3. Selects `<plugin-name>.dotxplugin`, or falls back to the only zip asset if exactly one exists
 4. Opens the package and verifies root `manifest.json` and `main.js`
 5. Verifies `manifest.json` id matches the submission
 6. Extracts permissions from the packaged manifest
@@ -227,7 +227,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 1. Loads source and existing registry
 2. For each plugin:
    - Fetches the latest GitHub release
-   - Selects `plugin.zip` or the only zip asset, downloads it, hashes the raw archive, opens the package, and extracts `version`, permissions, and `dotxVersion`
+   - Selects `<plugin-name>.dotxplugin` or the only zip asset, downloads it, hashes the raw archive, opens the package, and extracts `version`, permissions, and `dotxVersion`
    - If packaged version unchanged: updates mutable fields (name, description, tags, etc.) only
    - If packaged version changed: updates the registry entry to the new package metadata
    - Creates security review PR if permissions expanded during scheduled update
