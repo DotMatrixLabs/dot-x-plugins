@@ -1,14 +1,6 @@
 {
   "$schema": "./schemas/plugins-source.schema.json",
   "plugins": [
-    {
-      "id": "hello-world",
-      "name": "Hello World",
-      "author": "DotMatrixLabs",
-      "description": "Hello World demo plugin",
-      "repo": "https://github.com/DotMatrixLabs/hello-world-plugin",
-      "tags": ["example", "hello-world"]
-    }
   ]
 }
 
