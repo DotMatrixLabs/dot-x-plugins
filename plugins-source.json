@@ -1,6 +1,14 @@
 {
   "$schema": "./schemas/plugins-source.schema.json",
   "plugins": [
+    {
+      "id": "media-control",
+      "name": "Media Control",
+      "author": "Ananords",
+      "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
+      "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
+      "tags": ["media", "audio"]
+    }
   ]
 }
 
