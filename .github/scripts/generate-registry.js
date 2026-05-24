@@ -126,23 +126,25 @@ function inspectPackageBuffer(packageBuffer, sourcePluginId) {
   const entries = zip.getEntries().filter(entry => !entry.isDirectory);
 
   const manifestEntry = entries.find(entry => entry.entryName === 'manifest.json');
-  const mainEntry = entries.find(entry => entry.entryName === 'main.js');
 
   if (!manifestEntry) {
     throw new Error('plugin package must contain manifest.json at the archive root');
   }
-  if (!mainEntry) {
-    throw new Error('plugin package must contain main.js at the archive root');
-  }
 
   const manifest = JSON.parse(manifestEntry.getData().toString('utf8'));
+  const mainEntryName = normalizeManifestMain(manifest.main);
+  const mainEntry = entries.find(entry => entry.entryName === mainEntryName);
+
+  if (!mainEntry) {
+    throw new Error(`plugin package must contain the file declared by manifest.json main: ${mainEntryName}`);
+  }
   if (manifest.id !== sourcePluginId) {
     throw new Error(`Plugin ID mismatch: expected ${sourcePluginId}, found ${manifest.id} in manifest.json`);
   }
   if (!manifest.version || typeof manifest.version !== 'string') {
     throw new Error('manifest.json is missing a string "version" field');
   }
-  if (!manifest.dotxpluginVersion || typeof manifest.dotxpluginVersion !== 'string') {
+  if (!manifest.dotxVersion || typeof manifest.dotxVersion !== 'string') {
     throw new Error('manifest.json is missing a string "dotxVersion" field');
   }
   if (!Array.isArray(manifest.permissions)) {
@@ -151,16 +153,31 @@ function inspectPackageBuffer(packageBuffer, sourcePluginId) {
   if (manifest.permissions.some(permission => typeof permission !== 'string')) {
     throw new Error('manifest.json permissions must contain only strings');
   }
-  if (manifest.main && manifest.main !== 'main.js') {
-    throw new Error(`manifest.json must reference "main.js" for the marketplace package format. Found: ${manifest.main}`);
-  }
 
   return {
     manifest,
     version: manifest.version,
     permissions: manifest.permissions,
-    dotxVersion: manifest.dotxpluginVersion,
+    dotxVersion: manifest.dotxVersion,
   };
+}
+
+function normalizeManifestMain(main) {
+  if (!main || typeof main !== 'string') {
+    throw new Error('manifest.json is missing a string "main" field');
+  }
+
+  const normalized = main.trim().replace(/\\/g, '/');
+  if (!normalized || normalized.startsWith('/') || normalized.includes('\0')) {
+    throw new Error(`manifest.json main must be a relative path. Found: ${main}`);
+  }
+
+  const parts = normalized.split('/');
+  if (parts.includes('') || parts.includes('.') || parts.includes('..')) {
+    throw new Error(`manifest.json main must stay inside the package. Found: ${main}`);
+  }
+
+  return normalized;
 }
 
 async function createSecurityReviewPR(plugin, token, repository) {

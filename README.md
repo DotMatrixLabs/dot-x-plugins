@@ -56,7 +56,7 @@ The Dot X marketplace installer downloads exactly one package asset per release:
 The archive root must contain:
 
 - `manifest.json`
-- `main.js`
+- the entry file declared by `manifest.json` -> `main`
 
 The archive may also contain additional files and directories, such as:
 
@@ -95,7 +95,7 @@ The archive may also contain additional files and directories, such as:
      - Validate JSON schema
      - Verify the GitHub repo and latest release exist
      - Select `<plugin-name>.dotxplugin` and verify it is a valid plugin package
-     - Open the package and verify root `manifest.json` and `main.js`
+     - Open the package and verify root `manifest.json` and the declared entry file
      - Verify the `id` in `manifest.json` matches your submission
      - Post a comment listing detected permissions
 
@@ -140,16 +140,16 @@ Your `manifest.json` must be included inside `<plugin-name>.dotxplugin` and shou
 - `run` - Subprocess execution
 - `ffi` - Foreign function interface access
 
-**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `<plugin-name>.dotxplugin` containing root `manifest.json` and `main.js`.
+**Note:** The registry automatically uses the **latest release** from your repository. Make sure the latest release includes `<plugin-name>.dotxplugin` containing root `manifest.json` and the file declared by `manifest.main`.
 
 ### Publishing Checklist for the Package Format
 
 Before you publish a GitHub Release, make sure:
 
-1. Your plugin is built to a single `main.js` bundle.
-2. `manifest.json` references the compiled entrypoint with `"main": "main.js"`.
-3. Place `manifest.json`, `main.js`, and any required binaries/assets into a staging directory.
-4. Create `<plugin-name>.dotxplugin` from that staging directory, with `manifest.json` and `main.js` at the archive root.
+1. Your plugin is built to the entry file declared by `manifest.main`.
+2. `manifest.json` references the compiled entrypoint with a relative path, such as `"main": "main.js"` or `"main": "dist/main.js"`.
+3. Place `manifest.json`, the declared entry file, and any required binaries/assets into a staging directory.
+4. Create `<plugin-name>.dotxplugin` from that staging directory, with `manifest.json` at the archive root.
 5. The `id` in `manifest.json` matches the `id` in `plugins-source.json`.
 6. The latest release is the one you want Dot X to install from.
 
@@ -209,7 +209,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 1. Validates JSON schema
 2. Verifies GitHub repo and latest release exist
 3. Selects `<plugin-name>.dotxplugin` and verifies it is a valid plugin package
-4. Opens the package and verifies root `manifest.json` and `main.js`
+4. Opens the package and verifies root `manifest.json` and the declared entry file
 5. Verifies `manifest.json` id matches the submission
 6. Extracts permissions from the packaged manifest
 7. Posts PR comment with permission summary
