@@ -135,7 +135,8 @@ async function verifyPlugin(plugin, token) {
     name: plugin.name,
     status: 'ok',
     permissions: [],
-    release_assets: []
+    release_assets: [],
+    release: null
   };
 
   try {
@@ -147,6 +148,12 @@ async function verifyPlugin(plugin, token) {
 
     results.permissions = inspection.permissions;
     results.release_assets = [packageAsset.name];
+    results.release = {
+      tag_name: release.tag_name,
+      html_url: release.html_url,
+      package_asset_name: packageAsset.name,
+      package_asset_url: packageAsset.browser_download_url
+    };
 
     console.log(`Verified ${plugin.name} (${plugin.id}): ${results.permissions.length} permissions`);
     return results;

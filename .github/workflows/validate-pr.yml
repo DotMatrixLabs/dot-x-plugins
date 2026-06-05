@@ -47,9 +47,9 @@ jobs:
           script: |
             const fs = require('fs');
             const path = require('path');
-            
+
             let comment = '## Plugin Validation Report\n\n';
-            
+
             if ('${{ steps.validate-schema.outcome }}' === 'failure') {
               comment += '❌ **Schema validation failed.**\n\n';
               comment += 'Please check the workflow logs for details.\n';
@@ -62,23 +62,29 @@ jobs:
                 const resultsPath = path.join(process.cwd(), '.github', 'scripts', 'verification-results.json');
                 if (fs.existsSync(resultsPath)) {
                   const results = JSON.parse(fs.readFileSync(resultsPath, 'utf8'));
-                  
+
                   comment += '✅ **Validation passed!**\n\n';
-                  comment += '| Plugin | Status | Permissions |\n';
-                  comment += '|--------|--------|-------------|\n';
-                  
+                  comment += '| Plugin | Status | Release | Permissions |\n';
+                  comment += '|--------|--------|---------|-------------|\n';
+
                   results.forEach(plugin => {
                     const perms = plugin.permissions && plugin.permissions.length > 0
                       ? plugin.permissions.map(p => `\`${p}\``).join(', ')
                       : 'None';
                     const displayName = plugin.id ? `${plugin.name} (${plugin.id})` : plugin.name;
-                    comment += `| ${displayName} | ✅ OK | ${perms} |\n`;
+                    const release = plugin.release && plugin.release.html_url
+                      ? `[${plugin.release.tag_name || 'Latest release'}](${plugin.release.html_url})`
+                      : 'Unavailable';
+                    const packageAsset = plugin.release && plugin.release.package_asset_url
+                      ? ` ([download ${plugin.release.package_asset_name || 'package'}](${plugin.release.package_asset_url}))`
+                      : '';
+                    comment += `| ${displayName} | ✅ OK | ${release}${packageAsset} | ${perms} |\n`;
                   });
-                  
-                  const hasNetworkPerms = results.some(p => 
+
+                  const hasNetworkPerms = results.some(p =>
                     p.permissions && p.permissions.some(perm => perm.includes('--allow-net'))
                   );
-                  
+
                   if (hasNetworkPerms) {
                     comment += '\n> ⚠️ **Warning:** Plugins with network permissions require careful security review.\n';
                   }
@@ -91,11 +97,10 @@ jobs:
                 comment += 'Unable to generate detailed report.\n';
               }
             }
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: comment
             });
-
