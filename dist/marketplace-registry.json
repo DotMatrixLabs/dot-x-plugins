@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-15T08:26:11.999Z",
+  "generated_at": "2026-06-15T14:30:10.433Z",
   "plugins": [
     {
       "id": "media-control",
@@ -22,7 +22,7 @@
         "ffi"
       ],
       "likes": 0,
-      "downloads": 0
+      "downloads": 1
     }
   ]
 }
