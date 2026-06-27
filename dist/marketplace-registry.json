@@ -1,22 +1,22 @@
 {
-  "generated_at": "2026-06-15T14:30:10.433Z",
+  "generated_at": "2026-06-27T21:11:20.343Z",
   "plugins": [
     {
       "id": "media-control",
       "name": "Media Control",
       "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
       "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "media",
         "audio"
       ],
       "author": "Ananords",
-      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.1/media-control.dotxplugin",
+      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.2/media-control.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-2c2db4fd12a232e8dea29f82f98490b5a21bd03adcdd8258a45c06b8c052781d",
-      "package_size": 72936,
+      "package_integrity_hash": "sha256-6a0ff28f44442ca4fcbc1e6f5f167c3366a6e518909262ad56e5d05320f1ad4f",
+      "package_size": 218330,
       "approved_permissions": [
         "run",
         "ffi"
