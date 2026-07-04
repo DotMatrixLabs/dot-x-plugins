@@ -108,6 +108,33 @@ function detectPermissionExpansion(currentPerms, newPerms) {
   return Array.from(newSet).some(p => !currentSet.has(p));
 }
 
+const KNOWN_PLATFORMS = new Set(['windows', 'macos', 'linux']);
+
+function parseManifestPlatforms(manifest) {
+  if (manifest.platforms === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(manifest.platforms) || manifest.platforms.some((entry) => typeof entry !== 'string')) {
+    throw new Error('manifest.json "platforms" must be an array of strings if present');
+  }
+  const unknown = manifest.platforms.find((p) => !KNOWN_PLATFORMS.has(p.trim().toLowerCase()));
+  if (unknown) {
+    throw new Error(`manifest.json "platforms" contains unknown platform "${unknown}" (expected windows, macos, or linux)`);
+  }
+  const normalized = manifest.platforms.map((p) => p.trim().toLowerCase());
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function applyPlatforms(entry, platforms) {
+  const result = { ...entry };
+  if (platforms === undefined) {
+    delete result.platforms;
+  } else {
+    result.platforms = platforms;
+  }
+  return result;
+}
+
 function selectPackageAsset(release) {
   const dotxAssets = (release.assets || []).filter(asset => asset.name.toLowerCase().endsWith('.dotxplugin'));
   if (dotxAssets.length === 1) {
@@ -159,6 +186,7 @@ function inspectPackageBuffer(packageBuffer, sourcePluginId) {
     version: manifest.version,
     permissions: manifest.permissions,
     dotxVersion: manifest.dotxVersion,
+    platforms: parseManifestPlatforms(manifest),
   };
 }
 
@@ -244,7 +272,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
     console.log(`Processing ${sourcePlugin.name} (${sourcePlugin.id}) - latest release: ${latestTag}...`);
     const packageAsset = selectPackageAsset(release);
     const packageBuffer = await downloadBuffer(packageAsset.browser_download_url);
-    const { version, permissions, dotxVersion } = inspectPackageBuffer(packageBuffer, sourcePlugin.id);
+    const { version, permissions, dotxVersion, platforms } = inspectPackageBuffer(packageBuffer, sourcePlugin.id);
     const packageIntegrityHash = calculatePackageHash(packageBuffer);
     const hasPackageFields = Boolean(
       existingPlugin &&
@@ -255,7 +283,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
 
     if (existingPlugin && existingPlugin.version === version && hasPackageFields) {
       console.log(`Skipping ${sourcePlugin.name} (${sourcePlugin.id}) - version unchanged (${version})`);
-      return {
+      return applyPlatforms({
         ...existingPlugin,
         id: sourcePlugin.id,
         name: sourcePlugin.name,
@@ -263,7 +291,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
         tags: sourcePlugin.tags,
         funding_url: sourcePlugin.funding_url,
         author: sourcePlugin.author
-      };
+      }, platforms);
     }
 
     const hasExpansion = existingPlugin && detectPermissionExpansion(
@@ -291,7 +319,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       return existingPlugin;
     }
 
-    return {
+    return applyPlatforms({
       id: sourcePlugin.id,
       name: sourcePlugin.name,
       description: sourcePlugin.description,
@@ -308,7 +336,7 @@ async function processPlugin(sourcePlugin, existingPlugin, token, repository, tr
       approved_permissions: permissions,
       likes: existingPlugin?.likes || 0,
       downloads: existingPlugin?.downloads || 0,
-    };
+    }, platforms);
   } catch (error) {
     console.error(`Failed to process ${sourcePlugin.name} (${sourcePlugin.id}): ${error.message}`);
     if (existingPlugin) {
