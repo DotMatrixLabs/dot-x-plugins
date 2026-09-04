@@ -8,6 +8,14 @@
       "description": "Guide for installing and setting up the Stream Deck Plugin for Dot X",
       "repo": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin",
       "tags": ["stream-deck", "integration", "productivity"]
+    },
+    {
+      "id": "media-control",
+      "name": "Media Control",
+      "author": "Ananords",
+      "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
+      "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
+      "tags": ["media", "audio"]
     }
   ]
 }
