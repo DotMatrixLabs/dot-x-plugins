@@ -2,6 +2,14 @@
   "$schema": "./schemas/plugins-source.schema.json",
   "plugins": [
     {
+      "id": "dotx-streamdeck-companion",
+      "name": "Stream Deck Companion",
+      "author": "DotMatrixLabs",
+      "description": "Guide for installing and setting up the Stream Deck Plugin for Dot X",
+      "repo": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin",
+      "tags": ["stream-deck", "integration", "productivity"]
+    },
+    {
       "id": "media-control",
       "name": "Media Control",
       "author": "Ananords",
