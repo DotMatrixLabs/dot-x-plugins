@@ -1,6 +1,29 @@
 {
-  "generated_at": "2026-06-27T21:11:20.343Z",
+  "generated_at": "2026-10-22T16:27:30.740Z",
   "plugins": [
+    {
+      "id": "dotx-streamdeck-companion",
+      "name": "Stream Deck Companion",
+      "description": "Guide for installing and setting up the Stream Deck Plugin for Dot X",
+      "repo": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin",
+      "version": "0.1.1",
+      "dotxVersion": ">=1.0.0",
+      "tags": [
+        "stream-deck",
+        "integration",
+        "productivity"
+      ],
+      "author": "DotMatrixLabs",
+      "package_url": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin/releases/download/v0.1.1/dotx-streamdeck-companion.dotxplugin",
+      "package_format": "zip",
+      "package_integrity_hash": "sha256-0168aa25c2805c656b1a14a0d9da8bf5ab80eea503da62a709b3663997ee3182",
+      "package_size": 98445,
+      "approved_permissions": [
+        "net"
+      ],
+      "likes": 0,
+      "downloads": 0
+    },
     {
       "id": "media-control",
       "name": "Media Control",
