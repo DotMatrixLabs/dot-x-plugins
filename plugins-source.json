@@ -16,6 +16,14 @@
       "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
       "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
       "tags": ["media", "audio"]
+    },
+    {
+      "id": "mqtt-plugin",
+      "name": "MQTT Publisher",
+      "author": "Andreas Frøyland",
+      "description": "Publish Dot X slider values to an MQTT broker, with Home Assistant auto-discovery",
+      "repo": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin",
+      "tags": ["mqtt", "home-assistant", "smart-home", "integration"]
     }
   ]
 }
