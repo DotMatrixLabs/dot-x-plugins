@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-11-03T16:28:44.785Z",
+  "generated_at": "2026-11-03T17:43:09.130Z",
   "plugins": [
     {
       "id": "dotx-streamdeck-companion",
       "name": "Stream Deck Companion",
       "description": "Guide for installing and setting up the Stream Deck Plugin for Dot X",
       "repo": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "stream-deck",
@@ -14,10 +14,10 @@
         "productivity"
       ],
       "author": "DotMatrixLabs",
-      "package_url": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin/releases/download/v0.1.1/dotx-streamdeck-companion.dotxplugin",
+      "package_url": "https://github.com/DotMatrixLabs/dotx-streamdeck-plugin/releases/download/v0.1.2/dotx-streamdeck-companion.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-0168aa25c2805c656b1a14a0d9da8bf5ab80eea503da62a709b3663997ee3182",
-      "package_size": 98445,
+      "package_integrity_hash": "sha256-91f34c7be1448316fc3e83f927388c539735ef48b8b9208b6b386b63781a2b3a",
+      "package_size": 98693,
       "approved_permissions": [
         "net"
       ],
@@ -29,17 +29,17 @@
       "name": "Media Control",
       "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
       "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "media",
         "audio"
       ],
       "author": "Ananords",
-      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.2/media-control.dotxplugin",
+      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.3/media-control.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-6a0ff28f44442ca4fcbc1e6f5f167c3366a6e518909262ad56e5d05320f1ad4f",
-      "package_size": 218330,
+      "package_integrity_hash": "sha256-9f7a975f97e42f56f72778bfaedba2c959e0a3eb6520ac2e7968c5315fd284da",
+      "package_size": 222231,
       "approved_permissions": [
         "run",
         "ffi"
@@ -52,7 +52,7 @@
       "name": "MQTT Publisher",
       "description": "Publish Dot X slider values to an MQTT broker, with Home Assistant auto-discovery",
       "repo": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "mqtt",
@@ -61,10 +61,10 @@
         "integration"
       ],
       "author": "Andreas Frøyland",
-      "package_url": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin/releases/download/v1.0.1/mqtt-plugin.dotxplugin",
+      "package_url": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin/releases/download/v1.0.2/mqtt-plugin.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-06ff95a0e1faf053fe575389af1e4b6451dd86dfa9478eed9f9312e41a2215cd",
-      "package_size": 211675,
+      "package_integrity_hash": "sha256-6357fca7eebb4204d9ace85bd11ef7f9875930a5527e2282d15eb33f31da9308",
+      "package_size": 211881,
       "approved_permissions": [
         "net"
       ],
