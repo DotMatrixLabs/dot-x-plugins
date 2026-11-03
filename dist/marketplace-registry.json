@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-02T21:42:23.734Z",
+  "generated_at": "2026-11-03T16:28:44.785Z",
   "plugins": [
     {
       "id": "dotx-streamdeck-companion",
@@ -22,7 +22,7 @@
         "net"
       ],
       "likes": 0,
-      "downloads": 0
+      "downloads": 1
     },
     {
       "id": "media-control",
@@ -52,7 +52,7 @@
       "name": "MQTT Publisher",
       "description": "Publish Dot X slider values to an MQTT broker, with Home Assistant auto-discovery",
       "repo": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "mqtt",
@@ -61,15 +61,15 @@
         "integration"
       ],
       "author": "Andreas Frøyland",
-      "package_url": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin/releases/download/v1.0.0/mqtt-plugin.dotxplugin",
+      "package_url": "https://github.com/DotMatrixLabs/dotx-mqtt-plugin/releases/download/v1.0.1/mqtt-plugin.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-747a1fc44d052d1e5511f4266811e1d9ce42639d8d462f784a1c9f4610d0c1fa",
-      "package_size": 211595,
+      "package_integrity_hash": "sha256-06ff95a0e1faf053fe575389af1e4b6451dd86dfa9478eed9f9312e41a2215cd",
+      "package_size": 211675,
       "approved_permissions": [
         "net"
       ],
       "likes": 0,
-      "downloads": 0
+      "downloads": 1
     }
   ]
 }
