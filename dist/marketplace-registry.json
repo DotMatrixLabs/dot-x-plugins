@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-03T17:43:09.130Z",
+  "generated_at": "2026-11-11T15:58:59.772Z",
   "plugins": [
     {
       "id": "dotx-streamdeck-companion",
@@ -29,17 +29,17 @@
       "name": "Media Control",
       "description": "Control media playback from Dot X sliders — pause below threshold, skip/previous from center",
       "repo": "https://github.com/Andreas-Froyland/dotx-media-control",
-      "version": "0.1.3",
+      "version": "0.1.4",
       "dotxVersion": ">=1.0.0",
       "tags": [
         "media",
         "audio"
       ],
       "author": "Ananords",
-      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.3/media-control.dotxplugin",
+      "package_url": "https://github.com/Andreas-Froyland/dotx-media-control/releases/download/v0.1.4/media-control.dotxplugin",
       "package_format": "zip",
-      "package_integrity_hash": "sha256-9f7a975f97e42f56f72778bfaedba2c959e0a3eb6520ac2e7968c5315fd284da",
-      "package_size": 222231,
+      "package_integrity_hash": "sha256-8e0c0df5d547e580c076f7bd5976b037ce5109dd44fedcac915753db45bb9956",
+      "package_size": 222291,
       "approved_permissions": [
         "run",
         "ffi"
