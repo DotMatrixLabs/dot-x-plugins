@@ -6,7 +6,7 @@ The official registry and submission hub for Dot X plugins.
 
 This repository serves as the official plugin marketplace for Dot X. It holds the list of published plugins and the checks that run on submissions. It does not hold plugin code: each plugin lives in its own repository and is installed from that repository's GitHub Releases.
 
-Using an AI coding agent? Point it at this repository and see [AGENTS.md](./AGENTS.md).
+Using an AI coding agent? Point it at this repository; [AGENTS.md](./AGENTS.md) tells it where to start. There is also an installable [agent skill](https://github.com/DotMatrixLabs/create-dotx-plugin/tree/main/dot-x-plugin-dev).
 
 ## Build a plugin
 

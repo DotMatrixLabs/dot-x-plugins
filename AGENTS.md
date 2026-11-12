@@ -8,6 +8,7 @@ You are probably here because a user asked you to build a plugin for Dot X, the 
 - [SDK guide](https://github.com/DotMatrixLabs/dot-x/blob/main/plugin-sdk/README.md): plugin class, device events, settings pages, action mapper, toasts, manifest, permissions.
 - The SDK's TypeScript types in `node_modules/@dotmatrixlabs/dotx-plugin-sdk` after `npm install`. They are the authoritative API.
 - [hello-world-plugin](https://github.com/DotMatrixLabs/hello-world-plugin): copy patterns from here before inventing your own.
+- Agent skill with the SDK in one file: [dot-x-plugin-dev/SKILL.md](https://github.com/DotMatrixLabs/create-dotx-plugin/blob/main/dot-x-plugin-dev/SKILL.md). Users can install it with `npx skills add DotMatrixLabs/create-dotx-plugin/dot-x-plugin-dev`.
 
 ## How to work
 
