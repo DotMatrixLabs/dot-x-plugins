@@ -4,7 +4,36 @@ The official registry and submission hub for Dot X plugins.
 
 ## Overview
 
-This repository serves as the official plugin marketplace for Dot X.
+This repository serves as the official plugin marketplace for Dot X. It holds the list of published plugins and the checks that run on submissions. It does not hold plugin code: each plugin lives in its own repository and is installed from that repository's GitHub Releases.
+
+Using an AI coding agent? Point it at this repository and see [AGENTS.md](./AGENTS.md).
+
+## Build a plugin
+
+Plugins need Dot X 2.0 or newer ([download](https://github.com/DotMatrixLabs/dot-x/releases)). A plugin is a small Node or Deno program that connects to the running Dot X app and can react to slider changes, control RGB, add buttons to the action mapper, and add its own settings page.
+
+1. **Scaffold a project.** The Node template includes packaging and a release workflow for the marketplace:
+   ```bash
+   mkdir my-plugin && cd my-plugin
+   npx @dotmatrixlabs/create-dotx-plugin --node --name "My Plugin"
+   ```
+2. **Run it against Dot X.** Start Dot X first; it runs the plugin server on `localhost:3001`. Then:
+   ```bash
+   npm install
+   npm run build
+   npm start
+   ```
+   The plugin registers with Dot X and appears in Settings under Plugins with an "External" badge. Logs go to your terminal and to `plugin.log` in the plugin folder.
+3. **Write the plugin** with the SDK, `@dotmatrixlabs/dotx-plugin-sdk`. The [SDK guide](https://github.com/DotMatrixLabs/dot-x/blob/main/plugin-sdk/README.md) covers the plugin class, device events, settings pages, the action mapper, toasts, and the manifest. The SDK's TypeScript types document every call.
+4. **Package it** with `npm run package`, which builds `dist/<plugin-name>.dotxplugin`. Open that file (Dot X registers the file type) to install and test the packaged version.
+5. **Release it.** Push a version tag such as `v0.1.0`. The generated `.github/workflows/release-plugin.yml` attaches `<plugin-name>.dotxplugin` to a GitHub Release.
+6. **Submit it** to the marketplace with a pull request to this repository, as described below.
+
+Working examples:
+
+- [hello-world-plugin](https://github.com/DotMatrixLabs/hello-world-plugin): reference plugin that uses most SDK features
+- [dotx-mqtt-plugin](https://github.com/DotMatrixLabs/dotx-mqtt-plugin): publishes slider values to MQTT and Home Assistant
+- [dotx-streamdeck-plugin](https://github.com/DotMatrixLabs/dotx-streamdeck-plugin): Stream Deck Companion integration
 
 ## Architecture
 
@@ -114,10 +143,10 @@ Your `manifest.json` must be included inside `<plugin-name>.dotxplugin` and shou
   "version": "1.0.0",
   "description": "Plugin description",
   "author": "Your Name",
-  "dotxVersion": ">=1.0.0",
+  "dotxVersion": ">=2.0.0",
   "main": "main.js",
   "permissions": [
-    "env"
+    "net"
   ],
   "license": "MIT"
 }
@@ -129,11 +158,16 @@ Your `manifest.json` must be included inside `<plugin-name>.dotxplugin` and shou
 - `version` - Plugin version (semver)
 - `description` - Short description
 - `author` - Author name
-- `dotxVersion` - Minimum Dot X version requirement (e.g., ">=1.0.0")
-- `permissions` - Array of permission strings
+- `dotxVersion` - Dot X versions the plugin supports, as a semver range (e.g., ">=2.0.0"). Plugins exist from Dot X 2.0; a 2.0.0 beta satisfies ">=2.0.0".
+- `permissions` - Array of permission strings; use `[]` if the plugin needs no extra access
+
+**Optional Fields:**
+- `platforms` - Operating systems the plugin supports: any of `"windows"`, `"macos"`, `"linux"`. Omit to support all.
+- `packaging.include` - Extra files or folders to put in `<plugin-name>.dotxplugin`
+- `license` - License identifier, such as `"MIT"`
 
 **Common Permissions:**
-- `env` - Environment variable access
+- `env` - Read the user's full environment. Without it, a plugin sees only the variables Dot X sets for it (`DOTX_PLUGIN_*`) and a few common ones such as `PATH`, `NODE_ENV` and `TZ`.
 - `net` - Network access
 - `read` - File system read access
 - `write` - File system write access
@@ -153,7 +187,7 @@ Before you publish a GitHub Release, make sure:
 5. The `id` in `manifest.json` matches the `id` in `plugins-source.json`.
 6. The latest release is the one you want Dot X to install from.
 
-If you currently publish from GitHub Releases, you do not need a different hosting setup. You only need to make sure the release contains a self-contained zip package.
+If you currently publish from GitHub Releases, you do not need a different hosting setup. You only need to make sure the release contains `<plugin-name>.dotxplugin`, which is a zip archive.
 
 ## Registry Schema
 
@@ -237,7 +271,7 @@ If you currently publish from GitHub Releases, you do not need a different hosti
 
 The registry is available at:
 ```
-https://<user>.github.io/dot-x-plugins/marketplace-registry.json
+https://dotmatrixlabs.github.io/dot-x-plugins/marketplace-registry.json
 ```
 
 ## Security Considerations
