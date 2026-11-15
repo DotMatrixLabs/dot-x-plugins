@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-11T15:58:59.772Z",
+  "generated_at": "2026-11-15T15:31:21.991Z",
   "plugins": [
     {
       "id": "dotx-streamdeck-companion",
@@ -22,7 +22,7 @@
         "net"
       ],
       "likes": 0,
-      "downloads": 1
+      "downloads": 2
     },
     {
       "id": "media-control",
